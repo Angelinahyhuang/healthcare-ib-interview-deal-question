@@ -516,10 +516,16 @@
       if (step()) { e.preventDefault(); e.stopImmediatePropagation(); }
     }
   }, true);
-  // Mouse click also advances (step first, then slide).
-  window.addEventListener('click', () => {
-    if (!step() && stage._go) stage._go(stage._index + 1, 'click');
-  });
+  // Clicks and taps: handled here (capture phase) so the runtime's phone
+  // tap zones can't skip build steps. Desktop: click anywhere = forward.
+  // Phone: tap left third = back, elsewhere = forward.
+  const touch = matchMedia('(hover: none), (pointer: coarse)').matches;
+  window.addEventListener('click', e => {
+    if (!stage._go) return;
+    e.preventDefault(); e.stopPropagation();
+    if (touch && e.clientX < innerWidth / 3) { stage._go(stage._index - 1, 'tap'); return; }
+    if (!step()) stage._go(stage._index + 1, touch ? 'tap' : 'click');
+  }, true);
 })();
 </script>
 </body>
