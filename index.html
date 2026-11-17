@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Deal Walkthrough · Lilly × Morphic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Noto+Serif+SC:wght@400;500;600;700&family=Work+Sans:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="deck-stage.js"></script>
+<style>
+  :root {
+    --paper: #FAF7F1; --paper-2: #F1ECE2;
+    --ink: #3D2B20; --ink-2: #76614F; --ink-3: #A8937F;
+    --line: rgba(61,43,32,.13); --line-2: rgba(61,43,32,.26);
+    --claret: #8E3B30; --claret-soft: rgba(142,59,48,.08); --claret-line: rgba(142,59,48,.32);
+    --sage: #66775A; --sage-soft: rgba(102,119,90,.12); --sage-line: rgba(102,119,90,.4);
+    --slate: #56697F; --slate-soft: rgba(86,105,127,.11); --slate-line: rgba(86,105,127,.4);
+    --display: "Cormorant Garamond", "Noto Serif SC", Georgia, serif;
+    --cn: "Noto Serif SC", serif;
+    --sans: "Work Sans", "Noto Sans SC", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --ease: cubic-bezier(.2,.7,.15,1);
+  }
+  html, body { margin: 0; padding: 0; background: #151311; }
+  body.idle { cursor: none; }
+  * { box-sizing: border-box; }
+  h1, h2, h3, p { margin: 0; }
+
+  /* ---------- slide shell ---------- */
+  section.slide {
+    width: 1920px; height: 1080px; position: relative; overflow: hidden;
+    background: var(--paper); color: var(--ink); font-family: var(--sans); font-variant-numeric: lining-nums;
+  }
+  section.slide::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(1100px 700px at 12% 8%, rgba(255,255,255,.7), transparent 62%),
+      radial-gradient(900px 600px at 92% 100%, rgba(226,214,192,.22), transparent 60%);
+  }
+  section.slide::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: .14; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .12 0 0 0 0 .1 0 0 0 0 .08 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .chrome { position: absolute; z-index: 2; top: 54px; left: 96px; right: 96px; display: flex; justify-content: space-between; font: 500 15px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+  .chrome b { color: var(--ink); font-weight: 500; }
+  .topline { position: absolute; z-index: 2; top: 94px; left: 96px; right: 96px; height: 1px; background: var(--line); }
+  .foot { position: absolute; z-index: 2; bottom: 46px; left: 96px; right: 96px; display: flex; justify-content: space-between; align-items: baseline; font: italic 400 24px var(--display); color: var(--ink-2); }
+  .foot .handle { font: 400 21px var(--cn); font-style: normal; letter-spacing: .06em; color: var(--ink-2); }
+  .foot .m { font: 500 14px var(--mono); font-style: normal; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+  .body { position: absolute; z-index: 1; left: 96px; right: 96px; top: 150px; bottom: 120px; }
+
+  .k { font: 500 16px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--claret); display: flex; align-items: center; gap: 16px; }
+  .k::before { content: ""; width: 32px; height: 1px; background: currentColor; }
+  .k.sage { color: var(--sage); } .k.slate { color: var(--slate); }
+  h2.t { margin-top: 26px; font-family: var(--display); font-weight: 600; font-size: 66px; line-height: 1.2; letter-spacing: .01em; }
+  .en { font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500; font-size: 1.14em; letter-spacing: 0; }
+  .accent { color: var(--claret); }
+  .mono { font: 500 15px/1.2 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 12px; }
+  .tag { display: inline-flex; align-items: center; padding: 10px 22px; border: 1px solid var(--line-2); border-radius: 999px; font: 400 22px/1.2 var(--sans); color: var(--ink-2); background: rgba(255,255,255,.35); }
+  .tag.hot { border-color: var(--claret-line); color: var(--claret); background: rgba(255,255,255,.5); }
+  .card { background: rgba(255,255,255,.62); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(61,43,32,.03), 0 12px 32px -18px rgba(61,43,32,.12); border-radius: 28px; }
+
+  /* ---------- motion ---------- */
+  .rv, [data-step] {
+    opacity: 0; transform: translateY(22px); filter: blur(8px);
+    transition: opacity .9s var(--ease) var(--d, 0s), transform 1.1s var(--ease) var(--d, 0s), filter .9s var(--ease) var(--d, 0s);
+  }
+  .rv.in, [data-step].in { opacity: 1; transform: none; filter: blur(0); }
+  .draw { transform: scaleX(0); transform-origin: left center; transition: transform 1.3s var(--ease) var(--d, 0s); }
+  .draw.v { transform: scaleY(0); transform-origin: center top; }
+  .draw.in { transform: none; }
+  .stroke { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 2s var(--ease) var(--d, 0s); }
+  .in .stroke, .stroke.in { stroke-dashoffset: 0; }
+  .reset, .reset * { transition: none !important; }
+  html.static .rv, html.static [data-step], html.static .draw { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
+  html.static .stroke { stroke-dashoffset: 0 !important; transition: none !important; }
+  @media print {
+    .rv, [data-step], .draw { opacity: 1 !important; transform: none !important; filter: none !important; }
+    .stroke { stroke-dashoffset: 0 !important; }
+  }
+
+  /* ---------- 01 cover ---------- */
+  .s1 .left { position: absolute; left: 0; top: 140px; width: 1080px; }
+  .s1 h1 { margin-top: 40px; font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500; font-size: 104px; line-height: 1.04; letter-spacing: -.01em; }
+  .s1 .cnline { margin-top: 40px; font: 500 46px/1.3 var(--cn); letter-spacing: .04em; }
+  .s1 .rule { margin-top: 56px; width: 120px; height: 2px; background: var(--claret); }
+  .s1 .meta { margin-top: 40px; display: flex; gap: 64px; }
+  .s1 .meta div { display: flex; flex-direction: column; gap: 12px; }
+  .s1 .meta .v { font: 500 34px/1 var(--display); }
+  .s1 .art { position: absolute; right: -10px; top: 70px; width: 640px; height: 640px; }
+  .s1 .art text { font: 500 15px var(--mono); letter-spacing: .18em; fill: var(--ink-3); }
+
+  /* ---------- 02 two kinds ---------- */
+  .s2 .two { position: absolute; top: 210px; left: 0; right: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .s2 .col { padding: 48px 56px 52px; min-height: 360px; display: flex; flex-direction: column; }
+  .s2 .col h3 { margin-top: 26px; font: 600 44px/1.3 var(--cn); }
+  .s2 .col .look { margin-top: auto; padding-top: 36px; display: flex; align-items: center; gap: 22px; }
+  .s2 .col .look .mono { flex: none; }
+  .s2 .col.b { background: linear-gradient(160deg, rgba(255,255,255,.6), rgba(142,59,48,.06)); border-color: var(--claret-line); }
+  .s2 .col.b .mono:first-child { color: var(--claret); }
+  .s2 .bottom { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: baseline; gap: 18px; font: 500 34px/1.3 var(--cn); }
+  .s2 .bottom .arrow { color: var(--claret); font-family: var(--sans); font-weight: 300; }
+  .s2 .bottom .en { font-size: 40px; }
+  .s2 .bottom u { text-decoration: none; background: linear-gradient(transparent 62%, rgba(142,59,48,.16) 62%); }
+
+  /* ---------- 03 framework ---------- */
+  .s3 .track { position: absolute; top: 250px; left: 0; right: 0; height: 1px; background: var(--line-2); }
+  .s3 .cols { position: absolute; top: 250px; left: 0; right: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 56px; }
+  .s3 .c { position: relative; padding-top: 52px; }
+  .s3 .dot { position: absolute; top: -7px; left: 0; width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 1.5px solid var(--ink); }
+  .s3 .c.hl .dot { background: var(--claret); border-color: var(--claret); }
+  .s3 .c h3 { margin-top: 22px; font: italic 500 58px/1.05 "Cormorant Garamond", serif; }
+  .s3 .c.hl h3, .s3 .c.hl .mono { color: var(--claret); }
+  .s3 .c .cn { margin-top: 14px; font: 500 30px/1.3 var(--cn); color: var(--ink-2); }
+  .s3 .c .tags { margin-top: 40px; flex-direction: column; align-items: flex-start; }
+
+  /* ---------- 04 deal basics ---------- */
+  .s4 .chart { position: absolute; top: 215px; left: 0; width: 1040px; padding: 48px 56px 56px; }
+  .s4 .row { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 24px; }
+  .s4 .row + .row { margin-top: 92px; }
+  .s4 .row .lab { font: 400 24px var(--sans); color: var(--ink-2); }
+  .s4 .trk { position: relative; height: 56px; }
+  .s4 .bar { position: absolute; left: 0; top: 0; height: 56px; border-radius: 4px; }
+  .s4 .bar.prev { width: 50%; background: repeating-linear-gradient(135deg, rgba(61,43,32,.16) 0 2px, transparent 2px 9px); border: 1px solid var(--line-2); }
+  .s4 .bar.offer { width: 89.4%; background: var(--claret); }
+  .s4 .val { position: absolute; top: 0; height: 56px; display: flex; align-items: center; font: 500 40px/1 var(--display); white-space: nowrap; }
+  .s4 .prev + .val { left: calc(50% + 20px); color: var(--ink-2); }
+  .s4 .offer + .val { left: calc(89.4% + 20px); }
+  .s4 .brk { position: absolute; left: 50%; width: 39.4%; top: -40px; height: 18px; border: 1.5px solid var(--claret); border-bottom: 0; }
+  .s4 .brk > span { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); white-space: nowrap; font: 500 42px/1 var(--display); color: var(--claret); }
+  .s4 .brk > span small { font: 500 14px var(--mono); letter-spacing: .18em; text-transform: uppercase; margin-left: 10px; }
+  .s4 .chart .mono { margin-bottom: 92px; }
+  .s4 .facts { position: absolute; top: 215px; left: 1120px; right: 0; }
+  .s4 .fact { padding: 26px 0 28px; border-top: 1px solid var(--line-2); }
+  .s4 .fact .v { font: 500 48px/1.1 var(--display); }
+  .s4 .fact .d { margin-top: 10px; font: 400 22px/1.4 var(--sans); color: var(--ink-2); }
+  .take { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 32px; padding: 26px 36px; border-left: 3px solid var(--claret); background: linear-gradient(90deg, rgba(142,59,48,.07), transparent 70%); }
+  .take .mono { color: var(--claret); flex: none; }
+  .take p { font: 500 32px/1.4 var(--cn); }
+  .take p .en { font-size: 38px; }
+
+  /* ---------- 05 justify ---------- */
+  .s5 .cmp { position: absolute; top: 215px; left: 0; width: 1080px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .s5 .drug { padding: 40px 44px 40px; }
+  .s5 .drug.us { border-color: var(--claret-line); background: linear-gradient(160deg, rgba(255,255,255,.62), rgba(142,59,48,.06)); }
+  .s5 .drug .hd { display: flex; justify-content: space-between; align-items: flex-start; }
+  .s5 .drug svg { width: 112px; height: 72px; }
+  .s5 .drug .name { margin-top: 18px; font: 600 52px/1 var(--display); }
+  .s5 .drug.us .name, .s5 .drug.us .mono:first-child { color: var(--claret); }
+  .s5 .drug dl { margin: 28px 0 0; }
+  .s5 .drug dl div { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 0; border-top: 1px solid var(--line); }
+  .s5 .drug dt { font: 400 21px var(--sans); color: var(--ink-3); }
+  .s5 .drug dd { margin: 0; font: 500 26px var(--cn); }
+  .s5 .drug.us dd.hot { color: var(--claret); }
+  .s5 .tl { position: absolute; top: 215px; left: 1160px; right: 0; padding: 40px 44px; }
+  .s5 .tl .item { position: relative; padding-left: 36px; margin-top: 34px; }
+  .s5 .tl .item::before { content: ""; position: absolute; left: 0; top: 14px; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--claret); background: var(--paper); }
+  .s5 .tl .item + .item::after { content: ""; position: absolute; left: 5px; top: -58px; height: 62px; width: 1px; background: var(--line-2); }
+  .s5 .tl .when { font: 500 36px/1.1 var(--display); }
+  .s5 .tl .what { margin-top: 8px; font: 400 22px/1.45 var(--sans); color: var(--ink-2); }
+
+  /* ---------- 06 / 07 sides ---------- */
+  .flow { position: absolute; top: 230px; left: 0; right: 0; display: grid; grid-template-columns: 1fr 72px 1fr 72px 1fr; align-items: stretch; }
+  .flow .tile { padding: 44px 44px 48px; min-height: 320px; display: flex; flex-direction: column; }
+  .flow .tile .big { margin-top: auto; font: 600 42px/1.3 var(--cn); }
+  .flow .tile .sub { margin-top: 14px; font: italic 500 28px var(--display); color: var(--ink-2); }
+  .flow .arr { align-self: center; justify-self: center; width: 40px; height: 14px; }
+  .s6 .tile .mono:first-child { color: var(--sage); }
+  .s6 .tile.on { background: linear-gradient(160deg, rgba(255,255,255,.5), rgba(102,119,90,.22)); border-color: var(--sage-line); }
+  .s6 .tile.add { border-style: dashed; border-color: var(--sage-line); }
+  .s6 .take { border-left-color: var(--sage); background: linear-gradient(90deg, rgba(102,119,90,.1), transparent 70%); }
+  .s6 .take .mono { color: var(--sage); }
+
+  .s7 .runway { position: absolute; top: 230px; left: 0; right: 0; }
+  .s7 .runway .rtrack { position: relative; margin-top: 58px; height: 12px; border-radius: 6px; background: rgba(61,43,32,.07); }
+  .s7 .runway .rfill { position: absolute; left: 0; top: 0; bottom: 0; width: 92.9%; border-radius: 6px; background: linear-gradient(90deg, rgba(86,105,127,.55), var(--slate)); }
+  .s7 .runway .flag { position: absolute; left: 92.9%; bottom: 26px; width: 200px; margin-left: -100px; text-align: center; white-space: nowrap; }
+  .s7 .runway .flag .v { font: 500 36px/1 var(--display); color: var(--slate); }
+  .s7 .runway .flag::after { content: ""; display: block; margin: 10px auto 0; width: 1px; height: 18px; background: var(--slate); }
+  .s7 .runway .axis { position: relative; margin-top: 18px; height: 20px; }
+  .s7 .runway .axis span { position: absolute; transform: translateX(-50%); font: 400 15px var(--mono); letter-spacing: .12em; color: var(--ink-3); }
+  .s7 .runway .start { position: absolute; left: 0; bottom: 26px; font: 400 21px var(--sans); color: var(--ink-2); }
+  .s7 .opts { position: absolute; top: 470px; left: 0; right: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .s7 .opt { padding: 40px 48px 44px; }
+  .s7 .opt h3 { margin-top: 20px; font: 600 40px/1.3 var(--cn); }
+  .s7 .opt .chain { margin-top: 30px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font: 400 24px var(--sans); color: var(--ink-2); }
+  .s7 .opt .chain i { font-style: normal; color: var(--ink-3); }
+  .s7 .opt.sell { border-color: var(--slate-line); background: linear-gradient(160deg, rgba(255,255,255,.55), rgba(86,105,127,.13)); }
+  .s7 .opt.sell .mono:first-child { color: var(--slate); }
+  .s7 .opt.sell .tag { border-color: var(--slate-line); color: var(--slate); }
+
+  /* ---------- 08 recap ---------- */
+  .s8 .q { position: absolute; top: 90px; left: 0; right: 0; text-align: center; }
+  .s8 .q blockquote { margin: 0; font: 600 80px/1.3 var(--display); }
+  .s8 .q blockquote .en { font-size: 1.16em; color: var(--claret); }
+  .s8 .q .sub { margin-top: 30px; font: 400 26px var(--sans); color: var(--ink-2); }
+  .s8 .mid { position: absolute; top: 455px; left: 50%; width: 120px; margin-left: -60px; height: 1px; background: var(--claret); }
+  .s8 .recap { position: absolute; top: 520px; left: 0; right: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+  .s8 .recap > div { padding: 34px 40px 38px; }
+  .s8 .recap h3 { margin-top: 18px; font: italic 500 44px/1.1 "Cormorant Garamond", serif; }
+  .s8 .recap p { margin-top: 12px; font: 400 22px/1.5 var(--sans); color: var(--ink-2); }
+  .s8 .recap .hl { border-color: var(--claret-line); }
+  .s8 .recap .hl h3, .s8 .recap .hl .mono { color: var(--claret); }
+  .s8 .foot .cta { display: flex; align-items: center; gap: 12px; font: 500 24px var(--cn); font-style: normal; color: var(--ink); }
+  .s8 .foot .cta::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--claret); }
+</style>
+</head>
+<body>
+<deck-stage width="1920" height="1080">
+
+<!-- 01 COVER -->
+<section class="slide s1" data-label="Cover">
+  <div class="chrome rv"><span><b>Healthcare IBD</b> · Interview Notes</span><span>Nº 01</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="left">
+      <div class="k rv" style="--d:.2s">面试必考题</div>
+      <h1 class="rv" style="--d:.35s">“Tell me about a deal<br>you’ve been following.”</h1>
+      <p class="cnline rv" style="--d:.6s">医疗投行面试，这样答才加分</p>
+      <div class="rule draw" style="--d:.9s"></div>
+      <div class="meta rv" style="--d:1s">
+        <div><span class="mono">Case</span><span class="v">Eli Lilly × Morphic</span></div>
+        <div><span class="mono">Deal Value</span><span class="v">~$3.2B</span></div>
+        <div><span class="mono">Announced</span><span class="v">Jul 2024</span></div>
+      </div>
+    </div>
+    <svg class="art rv" style="--d:.3s" viewBox="0 0 640 640" aria-hidden="true">
+      <defs><clipPath id="cA"><circle cx="250" cy="320" r="190"/></clipPath></defs>
+      <circle cx="390" cy="320" r="190" fill="var(--claret)" opacity=".1" clip-path="url(#cA)"/>
+      <circle class="stroke" pathLength="1" style="--d:.5s" cx="250" cy="320" r="190" fill="none" stroke="var(--sage)" stroke-width="1.5"/>
+      <circle class="stroke" pathLength="1" style="--d:.8s" cx="390" cy="320" r="190" fill="none" stroke="var(--slate)" stroke-width="1.5"/>
+      <circle cx="320" cy="320" r="5" fill="var(--claret)"/>
+      <line x1="320" y1="320" x2="320" y2="590" stroke="var(--claret)" stroke-width="1" class="stroke" pathLength="1" style="--d:1.4s"/>
+      <text x="120" y="110">BUYER · LILLY</text>
+      <text x="400" y="560">TARGET · MORPHIC</text>
+      <text x="334" y="604" style="fill:var(--claret)">THE DEAL</text>
+    </svg>
+  </div>
+  <div class="foot rv" style="--d:1.2s"><span class="handle">小红书：意大利小灵缇</span><span class="m">Deal Walkthrough</span></div>
+</section>
+
+<!-- 02 TWO KINDS -->
+<section class="slide s2" data-label="Two Kinds">
+  <div class="chrome rv"><span><b>Foreword</b> · 先认清面试官</span><span>02 / 08</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="k rv" style="--d:.15s">Foreword</div>
+    <h2 class="t rv" style="--d:.3s">Healthcare banker，其实分<span class="accent">两种</span></h2>
+    <div class="two">
+      <div class="col card" data-step="1">
+        <span class="mono">Type A</span>
+        <h3>被分到 healthcare 组的投行人</h3>
+        <div class="look"><span class="mono">看重</span><div class="tags"><span class="tag">Technical</span><span class="tag">投行基本功</span></div></div>
+      </div>
+      <div class="col card b" data-step="2">
+        <span class="mono">Type B</span>
+        <h3>有医疗投资人的 mindset</h3>
+        <div class="look"><span class="mono">看重</span><div class="tags"><span class="tag hot">Industry knowledge</span><span class="tag hot">生物逻辑</span><span class="tag hot">竞争格局</span></div></div>
+      </div>
+    </div>
+    <p class="bottom" data-step="3">遇到 Type B <span class="arrow">→</span> <u><span class="en">“Tell me about a deal you’ve been following”</span></u> 一定要答好</p>
+  </div>
+  <div class="foot rv" style="--d:.5s"><span class="handle">小红书：意大利小灵缇</span><span class="m">Lilly × Morphic</span></div>
+</section>
+
+<!-- 03 FRAMEWORK -->
+<section class="slide s3" data-label="Framework">
+  <div class="chrome rv"><span><b>The Framework</b> · 三层答法</span><span>03 / 08</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="k rv" style="--d:.15s">The Framework</div>
+    <h2 class="t rv" style="--d:.3s">一个好回答，有<span class="accent">三层</span></h2>
+    <div class="track draw" style="--d:.5s"></div>
+    <div class="cols">
+      <div class="c" data-step="1">
+        <i class="dot"></i><span class="mono">Layer 01</span>
+        <h3>Deal basics</h3><p class="cn">讲清事实</p>
+        <div class="tags"><span class="tag">Buyer · Seller</span><span class="tag">Premium</span><span class="tag">Upfront vs. milestone</span></div>
+      </div>
+      <div class="c hl" data-step="2">
+        <i class="dot"></i><span class="mono">Layer 02</span>
+        <h3>Justify the premium</h3><p class="cn">给出你的观点</p>
+        <div class="tags"><span class="tag hot">Fair or overpay?</span><span class="tag hot">生物逻辑</span><span class="tag hot">Competitive landscape</span></div>
+      </div>
+      <div class="c" data-step="3">
+        <i class="dot"></i><span class="mono">Layer 03</span>
+        <h3>Why both sides</h3><p class="cn">两边各自的好处</p>
+        <div class="tags"><span class="tag">Buyer 的布局</span><span class="tag">Seller 的融资压力</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot rv" style="--d:.5s"><span class="handle">小红书：意大利小灵缇</span><span class="m">Lilly × Morphic</span></div>
+</section>
+
+<!-- 04 DEAL BASICS -->
+<section class="slide s4" data-label="Deal Basics">
+  <div class="chrome rv"><span><b>Layer 01</b> · Deal basics</span><span>04 / 08</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="k rv" style="--d:.15s">Layer 01 · Deal Basics</div>
+    <h2 class="t rv" style="--d:.3s">先把 <span class="en">the facts</span> 讲清楚</h2>
+    <div class="chart card rv" style="--d:.45s">
+      <div class="mono">Per share · 每股价格</div>
+      <div class="row">
+        <span class="lab">前收盘价</span>
+        <div class="trk"><div class="bar prev draw" style="--d:.8s"></div><span class="val rv" style="--d:1.2s">~$31.8</span></div>
+      </div>
+      <div class="row">
+        <span class="lab">Lilly 报价</span>
+        <div class="trk">
+          <div class="bar offer draw" style="--d:1.1s"></div><span class="val rv" style="--d:1.8s">$<span data-count="57" data-dec="0" data-ms="1200">57</span></span>
+          <div class="brk rv" style="--d:2s"><span>+<span data-count="79" data-ms="1300">79</span>%<small>Premium</small></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="facts">
+      <div class="fact" data-step="1"><div class="v">~$3.2B</div><div class="d">交易总额</div></div>
+      <div class="fact" data-step="2"><div class="v">All cash</div><div class="d">全现金支付</div></div>
+      <div class="fact" data-step="3"><div class="v">No CVR · 100% upfront</div><div class="d">没有 milestone，一次付清</div></div>
+    </div>
+    <div class="take" data-step="4"><span class="mono">So what</span><p>100% upfront，说明 Lilly 对这个资产<span class="accent">很有信心</span></p></div>
+  </div>
+  <div class="foot rv" style="--d:.5s"><span class="handle">小红书：意大利小灵缇</span><span class="m">Lilly × Morphic</span></div>
+</section>
+
+<!-- 05 JUSTIFY -->
+<section class="slide s5" data-label="Justify">
+  <div class="chrome rv"><span><b>Layer 02</b> · Justify the premium</span><span>05 / 08</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="k rv" style="--d:.15s">Layer 02 · Justify the Premium</div>
+    <h2 class="t rv" style="--d:.3s">79% 合理吗？关键在<span class="accent">口服</span></h2>
+    <div class="cmp">
+      <div class="drug card rv" style="--d:.5s">
+        <div class="hd"><span class="mono">现有药物</span>
+          <svg viewBox="0 0 112 72" fill="none" stroke="var(--ink-2)" stroke-width="1.6" stroke-linecap="round">
+            <rect x="22" y="26" width="58" height="20" rx="3"/><line x1="4" y1="36" x2="22" y2="36"/><line x1="4" y1="28" x2="4" y2="44"/>
+            <line x1="80" y1="36" x2="108" y2="36"/><line x1="36" y1="26" x2="36" y2="32"/><line x1="48" y1="26" x2="48" y2="32"/><line x1="60" y1="26" x2="60" y2="32"/>
+          </svg></div>
+        <div class="name">Entyvio</div>
+        <dl><div><dt>靶点</dt><dd>α4β7</dd></div><div><dt>给药方式</dt><dd>输液 / 注射</dd></div></dl>
+      </div>
+      <div class="drug card us rv" style="--d:.7s">
+        <div class="hd"><span class="mono">Morphic</span>
+          <svg viewBox="0 0 112 72" fill="none" stroke-width="1.6">
+            <g transform="rotate(-24 56 36)"><path d="M56 22 H34 a14 14 0 0 0 0 28 H56 Z" fill="var(--claret)" fill-opacity=".85" stroke="var(--claret)"/><path d="M56 22 H78 a14 14 0 0 1 0 28 H56" stroke="var(--claret)"/></g>
+          </svg></div>
+        <div class="name">MORF-057</div>
+        <dl><div><dt>靶点</dt><dd>α4β7</dd></div><div><dt>给药方式</dt><dd class="hot">口服</dd></div></dl>
+      </div>
+    </div>
+    <div class="tl card" data-step="1">
+      <span class="mono">Entyvio 的竞争压力</span>
+      <div class="item"><div class="when">May 2026</div><div class="what">美国 exclusivity 到期</div></div>
+      <div class="item"><div class="when">Under review</div><div class="what">Biosimilar 已进入 FDA 审评</div></div>
+    </div>
+    <div class="take" data-step="2"><span class="mono">My take</span><p>注射型 α4β7 竞争会更激烈，口服提前卡位 <span class="arrow">→</span> <span class="accent">premium 合理</span></p></div>
+  </div>
+  <div class="foot rv" style="--d:.5s"><span class="handle">小红书：意大利小灵缇</span><span class="m">Lilly × Morphic</span></div>
+</section>
+
+<!-- 06 LILLY -->
+<section class="slide s6" data-label="Buyer">
+  <div class="chrome rv"><span><b>Layer 03</b> · The buyer</span><span>06 / 08</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="k sage rv" style="--d:.15s">Layer 03 · Buyer</div>
+    <h2 class="t rv" style="--d:.3s">Lilly：把 IBD 布局<span style="color:var(--sage)">补完整</span></h2>
+    <div class="flow">
+      <div class="tile card" data-step="1"><span class="mono">Before</span><p class="big">已有 UC 药物</p><p class="sub">溃疡性结肠炎</p></div>
+      <svg class="arr" data-step="2" viewBox="0 0 40 14" fill="none" stroke="var(--sage)" stroke-width="1.5"><path d="M0 7 H38 M32 1 L38 7 L32 13"/></svg>
+      <div class="tile card add" data-step="2"><span class="mono">Add</span><p class="big">口服 α4β7</p><p class="sub">MORF-057</p></div>
+      <svg class="arr" data-step="3" viewBox="0 0 40 14" fill="none" stroke="var(--sage)" stroke-width="1.5"><path d="M0 7 H38 M32 1 L38 7 L32 13"/></svg>
+      <div class="tile card on" data-step="3"><span class="mono">Upside</span><p class="big">更完整的 IBD 布局</p><p class="sub">+ combo 的可能</p></div>
+    </div>
+    <div class="take" data-step="4"><span class="mono">Ask yourself</span><p>Buyer 原有布局 + 新药，能不能<span style="color:var(--sage)">做得更大</span>？</p></div>
+  </div>
+  <div class="foot rv" style="--d:.5s"><span class="handle">小红书：意大利小灵缇</span><span class="m">Lilly × Morphic</span></div>
+</section>
+
+<!-- 07 MORPHIC -->
+<section class="slide s7" data-label="Seller">
+  <div class="chrome rv"><span><b>Layer 03</b> · The seller</span><span>07 / 08</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="k slate rv" style="--d:.15s">Layer 03 · Seller</div>
+    <h2 class="t rv" style="--d:.3s">Morphic：不是<span style="color:var(--slate)">缺钱</span>才卖</h2>
+    <div class="runway rv" style="--d:.5s">
+      <span class="mono">Cash runway</span>
+      <div class="rtrack">
+                <div class="rfill draw" style="--d:.8s"></div>
+        <div class="flag rv" style="--d:1.9s"><div class="v">2027 H2</div></div>
+      </div>
+      <div class="axis">
+        <span style="left:0%;transform:none">Jul 2024 · Deal</span>
+        <span style="left:14.3%">2025</span><span style="left:42.9%">2026</span><span style="left:71.4%">2027</span><span style="left:100%;transform:translateX(-100%)">2028</span>
+      </div>
+    </div>
+    <div class="opts">
+      <div class="opt card" data-step="1">
+        <span class="mono">Option A · 继续独立</span>
+        <h3>后期临床越来越烧钱</h3>
+        <div class="chain"><span class="tag">后期临床</span><i>→</i><span class="tag">一轮轮融资</span><i>→</i><span class="tag">股权被 dilute</span></div>
+      </div>
+      <div class="opt card sell" data-step="2">
+        <span class="mono">Option B · 卖给 Lilly</span>
+        <h3>拿到确定的现金</h3>
+        <div class="chain"><span class="tag">大药企 clinical support</span><span class="tag">不用再 dilute</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot rv" style="--d:.5s"><span class="handle">小红书：意大利小灵缇</span><span class="m">Lilly × Morphic</span></div>
+</section>
+
+<!-- 08 RECAP -->
+<section class="slide s8" data-label="Recap">
+  <div class="chrome rv"><span><b>Recap</b> · 一句话总结</span><span>08 / 08</span></div>
+  <div class="topline draw" style="--d:.1s"></div>
+  <div class="body">
+    <div class="q">
+      <blockquote class="rv" style="--d:.2s">不只复述 deal，<br>要讲出 <span class="en">your view</span>。</blockquote>
+      <p class="sub rv" style="--d:.5s">让面试官听到：你真的懂这个 market</p>
+    </div>
+    <div class="mid draw" style="--d:.7s;transform-origin:center"></div>
+    <div class="recap">
+      <div class="card rv" style="--d:.9s"><span class="mono">01</span><h3>Deal basics</h3><p>Buyer · seller · premium · upfront</p></div>
+      <div class="card hl rv" style="--d:1.05s"><span class="mono">02</span><h3>Justify the premium</h3><p>用生物逻辑或竞争格局讲出观点</p></div>
+      <div class="card rv" style="--d:1.2s"><span class="mono">03</span><h3>Why both sides</h3><p>Buyer 的布局 · Seller 的融资与 dilution</p></div>
+    </div>
+  </div>
+  <div class="foot rv" style="--d:1.4s"><span class="handle">小红书：意大利小灵缇</span><span class="cta">收藏，面试前再看一遍</span></div>
+</section>
+
+</deck-stage>
+
+<script>
+(function () {
+  const stage = document.querySelector('deck-stage');
+  const STATIC = /[?&]static\b/.test(location.search);
+  if (STATIC) document.documentElement.classList.add('static');
+  const slides = Array.from(document.querySelectorAll('section.slide'));
+
+  // Recording mode: hide the runtime's black nav pill.
+  customElements.whenDefined('deck-stage').then(() => {
+    const root = stage.shadowRoot;
+    if (root && !root.getElementById('rec')) {
+      const s = document.createElement('style'); s.id = 'rec';
+      s.textContent = '.overlay{display:none!important}';
+      root.appendChild(s);
+    }
+  });
+
+  // Hide the cursor while idle.
+  let idleT;
+  window.addEventListener('mousemove', () => {
+    document.body.classList.remove('idle');
+    clearTimeout(idleT); idleT = setTimeout(() => document.body.classList.add('idle'), 1500);
+  });
+
+  function countUp(el, delay) {
+    const target = parseFloat(el.dataset.count), dec = parseInt(el.dataset.dec || '0', 10);
+    const ms = parseInt(el.dataset.ms || '1200', 10);
+    el.textContent = (0).toFixed(dec);
+    setTimeout(() => {
+      const t0 = performance.now();
+      (function tick(now) {
+        const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+        el.textContent = (target * e).toFixed(dec);
+        if (p < 1) requestAnimationFrame(tick);
+      })(t0);
+    }, delay);
+  }
+  function reveal(el) {
+    el.classList.add('in');
+    const d = (parseFloat(getComputedStyle(el).getPropertyValue('--d')) || 0) * 1000;
+    el.querySelectorAll('[data-count]').forEach(c => countUp(c, d));
+  }
+  function groups(slide) {
+    const m = {};
+    slide.querySelectorAll('[data-step]').forEach(el => (m[el.dataset.step] = m[el.dataset.step] || []).push(el));
+    return Object.keys(m).map(Number).sort((a, b) => a - b).map(k => m[k]);
+  }
+  function play(slide, all) {
+    if (!slide || STATIC) return;
+    slide.classList.add('reset');
+    slide.querySelectorAll('.rv, .draw, [data-step]').forEach(el => el.classList.remove('in'));
+    void slide.offsetWidth;
+    slide.classList.remove('reset');
+    slide._g = groups(slide); slide._i = 0;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      slide.querySelectorAll('.rv, .draw').forEach(reveal);
+      if (all) { slide._g.forEach(g => g.forEach(reveal)); slide._i = slide._g.length; }
+    }));
+  }
+  const active = () => slides.find(s => s.hasAttribute('data-deck-active'));
+
+  document.addEventListener('slidechange', e => {
+    const back = e.detail.previousIndex > e.detail.index;
+    play(e.detail.slide, back);
+  });
+  // In case the initial slidechange fired before this script ran.
+  setTimeout(() => { const s = active(); if (s && !s._g) play(s, false); }, 60);
+
+  function step() {
+    const s = active();
+    if (s && s._g && s._i < s._g.length) { s._g[s._i++].forEach(reveal); return true; }
+    return false;
+  }
+  // Forward keys reveal the next build step before moving to the next slide.
+  window.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (['ArrowRight', 'PageDown', ' ', 'Spacebar', 'ArrowDown', 'Enter'].includes(e.key)) {
+      if (step()) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }
+  }, true);
+  // Mouse click also advances (step first, then slide).
+  window.addEventListener('click', () => {
+    if (!step() && stage._go) stage._go(stage._index + 1, 'click');
+  });
+})();
+</script>
+</body>
+</html>
